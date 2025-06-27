@@ -4,7 +4,7 @@ declare module 'ewelink-api' {
     password: string;
     region?: string;
   }
-  export class ewelink {
+  export default class ewelink {
     constructor(options: EWeLinkOptions);
     getDevice(deviceId: string): Promise<any>;
     toggleDevice(deviceId: string): Promise<any>;

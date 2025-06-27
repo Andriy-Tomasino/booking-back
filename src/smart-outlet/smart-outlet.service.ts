@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
-import { ewelink } from 'ewelink-api';
+import ewelink from 'ewelink-api';
 import { SmartOutlet } from './interfaces/smart-outlet.interface';
 
 @Injectable()

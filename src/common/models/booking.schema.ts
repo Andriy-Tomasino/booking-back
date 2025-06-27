@@ -1,36 +1,28 @@
-//import * as mongoose from 'mongoose';
-import {Schema, Types, model, Document} from 'mongoose';
+import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
+import { HydratedDocument, Types } from 'mongoose';
+import { User } from './user.schema';
+import { Computer } from './computer.schema';
 
-export interface Booking extends Document{
-  userId:Types.ObjectId,
-  computerId:Types.ObjectId,
-  startTime:Date,
-  endTime:Date,
-  status:String,
+export type BookingDocument = HydratedDocument<Booking>;
+
+@Schema({ timestamps: true })
+export class Booking {
+  @Prop({ type: Types.ObjectId, ref: User.name, required: true })
+  userId!: Types.ObjectId;
+
+  @Prop({ type: Types.ObjectId, ref: Computer.name, required: true })
+  computerId!: Types.ObjectId;
+
+  @Prop({ required: true })
+  startTime!: Date;
+
+  @Prop({ required: true })
+  endTime!: Date;
+
+  @Prop({ default: 'active', enum: ['active', 'completed', 'cancelled'] })
+  status!: 'active' | 'completed' | 'cancelled';
 }
 
-export const BookingSchema = new Schema({
-  userId:{
-    type:Types.ObjectId,
-    required:true,
-    ref:'User',
-  },
-  computerId:{
-    type:Types.ObjectId,
-    required:true,
-    ref:'Computer',
-  },
-  startTime:{
-    type:Date,
-    required:true,
-  },
-  endTime:{
-    type:Date,
-    required:true,
-  },
-  status:{
-    type:String,
-    enum:['active', 'cancelled'],
-    required:true,
-  }
-})
+export const BookingSchema = SchemaFactory.createForClass(Booking);
+// Индексы для оптимизации запросов на пересечение времени
+BookingSchema.index({ computerId: 1, startTime: 1, endTime: 1 });

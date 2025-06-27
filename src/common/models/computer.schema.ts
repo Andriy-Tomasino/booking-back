@@ -3,7 +3,7 @@ import{HydratedDocument} from 'mongoose';
 
 export type ComputerDocument = HydratedDocument<Computer>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Computer{
 
   @Prop({required:true, unique:true})
@@ -12,8 +12,12 @@ export class Computer{
   @Prop({required:true, unique:true})
   location !: string;
 
-  @Prop({required:true, unique:true, default:false})
+  @Prop({required:true, default:false})
   isAvailable !: boolean;
+
+  @Prop({required:true})
+  outletId !: string;
+
 }
 
 export const ComputerSchema = SchemaFactory.createForClass(Computer);
