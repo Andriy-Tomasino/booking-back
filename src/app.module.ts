@@ -6,6 +6,9 @@ import { ComputersModule } from './computers/computers.module';
 import { AuthModule } from './auth/auth.module';
 import { configuration } from './config/configuration';
 import { BookingsModule } from './bookings/bookings.module';
+import * as admin from 'firebase-admin';
+import * as path from 'path';
+import * as console from 'node:console';
 
 @Module({
   imports: [
@@ -17,4 +20,16 @@ import { BookingsModule } from './bookings/bookings.module';
     BookingsModule,
   ],
 })
-export class AppModule {}
+export class AppModule {
+  constructor() {
+    const serviceAccountPath = path.resolve(__dirname, '../../serviceAccount.json');
+    console.log('Loading serviceAccount from:', serviceAccountPath);
+    const serviceAccount = require(serviceAccountPath);
+    if (!admin.apps.length) {
+      admin.initializeApp({
+        credential: admin.credential.cert(serviceAccount),
+      });
+      console.log('Firebase Admin initialized');
+    }
+  }
+}

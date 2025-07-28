@@ -1,22 +1,15 @@
 import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
-import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const config = new DocumentBuilder()
-    .setTitle('Computer booking')
-    .setDescription('API for booking computers')
-    .setVersion('1.0')
-    .addBearerAuth()
-    .build();
-  const document = SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup('api', app, document);
   app.enableCors({
-    origin: ['http://localhost:8081', 'http://localhost:19006'],
-    methods: 'GET,POST',
-    allowedHeaders: 'Content-Type',
+    origin: 'http://localhost:8081',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    allowedHeaders: ['Content-Type', 'Authorization'],
+    credentials: true,
   });
-  await app.listen(process.env.PORT ?? 3000);
+  await app.listen(3000);
+  console.log('NestJS application is running on: http://localhost:3000');
 }
 bootstrap();

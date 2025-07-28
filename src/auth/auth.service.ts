@@ -11,14 +11,7 @@ export class AuthService {
   constructor(
     @InjectModel(User.name) private readonly userModel: Model<UserDocument>,
     private readonly jwtService: JwtService,
-  ) {
-    // Инициализация Firebase Admin
-    if (!admin.apps.length) {
-      admin.initializeApp({
-        credential: admin.credential.cert(require('../../../firebase-admin-config.json')),
-      });
-    }
-  }
+  ) {}
 
   async validateGoogleIdToken(idToken: string): Promise<AuthResponseDto> {
     console.log('[AuthService] Verifying Firebase idToken');
@@ -44,10 +37,11 @@ export class AuthService {
       }
 
       const jwtPayload = { sub: user._id };
-      const accessToken = this.jwtService.sign(jwtPayload);
+      const jwtToken = this.jwtService.sign(jwtPayload);
       console.log('[AuthService] Generated accessToken for user:', user._id);
       return {
-        accessToken,
+        accessToken: idToken,
+        jwtToken,
         email: user.email,
         name: user.name,
         role: user.role,
