@@ -1,29 +1,20 @@
-import { Controller, Get, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Request, UseGuards } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthGuard } from '@nestjs/passport';
 import { AuthResponseDto } from './dtos/auth.dto';
-import { JwtAuthGuard } from './jwt-auth.guard';
-import { UserDocument } from '../common/models/user.schema';
+import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Get('google')
-  @UseGuards(AuthGuard('google'))
-  googleAuth() {
-    //Initiates Google flow
+  @Post('google')
+  async googleLogin(@Body('idToken') idToken: string): Promise<AuthResponseDto> {
+    return this.authService.validateGoogleIdToken(idToken);
   }
 
-  @Get('google/callback')
-  @UseGuards(AuthGuard('google'))
-  googleAuthRedirect(@Request() req): Promise<AuthResponseDto> {
-    return req.user; //return AuthResponseDto from GoogleStrategy
-  }
-
-  @UseGuards(JwtAuthGuard)
+  @UseGuards(AuthGuard('jwt'))
   @Get('profile')
-  getProfile(@Request() req): Promise<UserDocument> {
-    return this.authService.getProfile(req.user._id);
+  async getProfile(@Request() req): Promise<AuthResponseDto> {
+    return this.authService.getProfile(req.user.sub);
   }
 }

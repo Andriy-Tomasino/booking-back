@@ -1,4 +1,4 @@
-import { IsString, IsNotEmpty } from 'class-validator';
+import { IsString, IsNotEmpty, isString } from 'class-validator';
 
 export class AuthResponseDto {
   @IsString()
@@ -14,4 +14,9 @@ export class AuthResponseDto {
 
   @IsString()
   role !: string;
+
+  @IsString()
+  @IsNotEmpty()
+  _id !: string;
+
 }

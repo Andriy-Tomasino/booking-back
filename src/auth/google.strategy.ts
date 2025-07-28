@@ -1,35 +1,30 @@
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { Strategy, StrategyOptions } from 'passport-google-oauth20';
-import { ConfigService } from '@nestjs/config';
+import { Strategy, Profile, StrategyOptions } from 'passport-google-oauth20';
 import { AuthService } from './auth.service';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
-  constructor(
-    private readonly configService: ConfigService,
-    private readonly authService: AuthService,
-  ) {
+  constructor(private readonly authService: AuthService) {
     super({
-      clientID: configService.get<string>('GOOGLE_CLIENT_ID'),
-      clientSecret: configService.get<string>('GOOGLE_CLIENT_SECRET'),
+      clientID: process.env.GOOGLE_CLIENT_ID || '',
+      clientSecret: process.env.GOOGLE_CLIENT_SECRET || '',
       callbackURL: 'http://localhost:3000/auth/google/callback',
-      scope: ['email', 'profile'],
-      passReqToCallback: false, // Не передаём req в validate
+      scope: ['profile', 'email'],
+      passReqToCallback: false, // Явно указываем, что req не нужен
     } as StrategyOptions);
   }
 
-  async validate(
-    accessToken: string,
-    refreshToken: string,
-    profile: any,
-  ): Promise<any> {
-    const { id, emails, displayName } = profile;
-    const email = emails[0].value;
-    return this.authService.validateGoogleUser({
-      googleId: id,
-      email,
-      name: displayName,
+  async validate(accessToken: string, refreshToken: string, profile: Profile): Promise<any> {
+    console.log('[GoogleStrategy] Validating profile:', profile);
+    if (!profile.emails || profile.emails.length === 0) {
+      throw new Error('No email provided by Google profile');
+    }
+    const user = await this.authService.validateGoogleUser({
+      id: profile.id,
+      emails: profile.emails.map((email) => ({ value: email.value })),
+      displayName: profile.displayName || '',
     });
+    return user;
   }
 }
