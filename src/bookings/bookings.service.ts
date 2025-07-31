@@ -19,12 +19,16 @@ export class BookingsService {
     const start = new Date(startTime);
     const end = new Date(endTime);
 
+    console.log('[BookingsService] Creating booking:', { userId, computerId, startTime, endTime });
+
     if (start >= end) {
-      throw new BadRequestException('Start date must be less than end date.');
+      console.log('[BookingsService] Validation failed: startTime >= endTime');
+      throw new BadRequestException('Start date must be before end date.');
     }
 
     const computer = await this.computersService.getComputerById(computerId);
-    if (!computer.isAvailable) {
+    if (!computer) {
+      console.log('[BookingsService] Computer not found:', computerId);
       throw new BadRequestException('Computer not found.');
     }
 
@@ -34,11 +38,11 @@ export class BookingsService {
       $or: [
         { startTime: { $lt: end }, endTime: { $gt: start } },
       ],
-    })
-      .exec();
+    }).exec();
 
     if (overlappingBooking) {
-      throw new BadRequestException('Computer is already booked for this time slot');
+      console.log('[BookingsService] Overlapping booking found:', overlappingBooking);
+      throw new BadRequestException(`Computer is already booked from ${overlappingBooking.startTime} to ${overlappingBooking.endTime}.`);
     }
 
     const booking = new this.bookingModel({
@@ -49,9 +53,18 @@ export class BookingsService {
       status: 'active',
     });
 
+    console.log('[BookingsService] Updating computer availability:', computerId);
     await this.computersService.updateComputer(computerId, { isAvailable: false });
-    await booking.save();
-    return booking;
+    const savedBooking = await booking.save();
+    console.log('[BookingsService] Booking created:', savedBooking);
+    return savedBooking;
+  }
+
+  async getBookingsByComputerId(computerId: string): Promise<BookingDocument[]> {
+    console.log('[BookingsService] Fetching bookings for computerId:', computerId);
+    const bookings = await this.bookingModel.find({ computerId, status: 'active' }).exec();
+    console.log('[BookingsService] Bookings found:', bookings);
+    return bookings;
   }
 
   async getBookingById(id: string): Promise<BookingDocument> {
@@ -77,6 +90,18 @@ export class BookingsService {
     return this.bookingModel
       .find()
       .populate('computerId', 'name location')
+      .exec();
+  }
+
+  async getNextBookingByComputerId(computerId: string): Promise<BookingDocument | null> {
+    const now = new Date();
+    return this.bookingModel
+      .findOne({
+        computerId,
+        status: 'active',
+        startTime: { $gte: now }, // Бронирование в будущем
+      })
+      .sort({ startTime: 1 }) // Сортировка по startTime (ближайшее)
       .exec();
   }
 

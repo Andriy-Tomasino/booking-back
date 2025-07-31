@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards, NotFoundException } from '@nestjs/common';
 import { ComputersService } from './computers.service';
 import { CreateComputerDto, UpdateComputerDto } from './dtos/computer.dto';
 import { Computer, ComputerDocument } from '../common/models/computer.schema';
@@ -15,28 +15,17 @@ export class ComputersController {
   }
 
   @Get()
-  async getAllComputers(@Req() request: any): Promise<ComputerDocument[]> {
-    try {
-      const authHeader = request.headers.authorization;
-      if (!authHeader || !authHeader.startsWith('Bearer ')) {
-        throw new Error('Missing or invalid Authorization header');
-      }
-      const idToken = authHeader.split('Bearer ')[1];
-      console.log('[ComputersController] Verifying idToken:', idToken);
-      await admin.auth().verifyIdToken(idToken);
-      return this.computersService.getAllComputers();
-    } catch (error: any) {
-      console.error('[ComputersController] Error:', error);
-      throw new HttpException(
-        { message: 'Unauthorized', error: error.message || 'Unknown error', statusCode: 401 },
-        HttpStatus.UNAUTHORIZED,
-      );
-    }
+  async findAll(): Promise<Computer[]> {
+    return this.computersService.getAllComputers();
   }
 
   @Get(':id')
-  getComputerById(@Param('id') id: string): Promise<ComputerDocument> {
-    return this.computersService.getComputerById(id);
+  async findOne(@Param('id') id: string): Promise<Computer> {
+    try {
+      return await this.computersService.getComputerById(id);
+    } catch (error) {
+      throw new NotFoundException(`Computer with id ${id} not found`);
+    }
   }
 
   @Get(':id/status')

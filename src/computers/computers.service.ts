@@ -22,27 +22,38 @@ export class ComputersService {
     return computer;
     }
 
-    async getComputerById(id: string): Promise<ComputerDocument> {
-    const computer = await this.computerModel.findById(id).exec();
+  async getAllComputers(): Promise<ComputerDocument[]> {
+    console.log('[ComputersService] Fetching all computers');
+    const computers = await this.computerModel.find().exec();
+    console.log('[ComputersService] Computers found:', computers);
+    return computers;
+  }
+
+  async getComputerById(id: string): Promise<ComputerDocument> {
+    console.log('[ComputersService] Fetching computer with id:', id);
+    const computer = await this.computerModel.findOne({ id }).exec();
     if (!computer) {
-      throw new NotFoundException('Computer with ID not found');
+      console.log('[ComputersService] Computer not found:', id);
+      throw new NotFoundException(`Computer with id ${id} not found`);
     }
+    console.log('[ComputersService] Computer found:', computer);
     return computer;
-    }
+  }
 
-    async getAllComputers(): Promise<ComputerDocument[]> {
-      this.logger.log('Fetching all computers');
-      return this.computerModel.find().exec();
+  async updateComputer(id: string, updateData: Partial<Computer>): Promise<ComputerDocument> {
+    console.log('[ComputersService] Updating computer with id:', id, updateData);
+    const updatedComputer = await this.computerModel.findOneAndUpdate(
+      { id }, // Ищем по полю id
+      updateData,
+      { new: true }
+    ).exec();
+    if (!updatedComputer) {
+      console.log('[ComputersService] Computer not found for update:', id);
+      throw new NotFoundException(`Computer with id ${id} not found`);
     }
-
-    async updateComputer(id: string, dto: UpdateComputerDto): Promise<Computer> {
-      this.logger.log(`Update computer: ${id}`);
-      const compuer = await this.computerModel.findByIdAndUpdate(id, { $set: dto }, { new: true }).exec();
-      if(!compuer) {
-        throw new NotFoundException('Computer with ID not found');
-      }
-      return compuer;
-    }
+    console.log('[ComputersService] Computer updated:', updatedComputer);
+    return updatedComputer;
+  }
 
   async deleteComputer(id: string): Promise<void> {
     this.logger.log(`Delete computer: ${id}`);
