@@ -1,10 +1,10 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+// src/auth/auth.service.ts
+import { Injectable, BadRequestException, UnauthorizedException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
 import { JwtService } from '@nestjs/jwt';
-import * as admin from 'firebase-admin';
+import { auth as adminAuth } from 'firebase-admin';
 import { User, UserDocument } from '../common/models/user.schema';
-import { AuthResponseDto } from './dtos/auth.dto';
 
 @Injectable()
 export class AuthService {
@@ -13,83 +13,49 @@ export class AuthService {
     private readonly jwtService: JwtService,
   ) {}
 
-  async validateGoogleIdToken(idToken: string): Promise<AuthResponseDto> {
-    console.log('[AuthService] Verifying Firebase idToken');
+  /**
+   * Приходит Firebase idToken (с фронта после phone auth).
+   * Мы валидируем его через firebase-admin, достаём uid,
+   * находим пользователя в своей БД и выдаём наш JWT.
+   */
+  async login(idToken: string) {
     try {
-      const decodedToken = await admin.auth().verifyIdToken(idToken);
-      console.log('[AuthService] Decoded token:', decodedToken);
+      const decoded = await adminAuth().verifyIdToken(idToken);
+      const firebaseUid = decoded.uid;
+      console.log('[AuthService] Firebase UID:', firebaseUid);
 
-      const { uid: googleId, email, name } = decodedToken;
+      let user = await this.userModel.findOne({ uid: firebaseUid }).exec();
 
-      let user = await this.userModel.findOne({ googleId }).exec();
       if (!user) {
-        user = await this.userModel.findOne({ email }).exec();
-        if (user) {
-          if (user.googleId && user.googleId !== googleId) {
-            throw new UnauthorizedException('Email already linked to another Google account');
-          }
-          user.googleId = googleId;
-          await user.save();
-        } else {
-          user = new this.userModel({ googleId, email, name, role: 'user' });
-          await user.save();
-        }
+        // ⚡ Можно автоматом создавать юзера
+        user = new this.userModel({
+          uid: firebaseUid,
+          email: decoded.email ?? null,
+          role: 'pending', // или сразу 'user', если не нужна модерация
+        });
+        await user.save();
+        console.log('[AuthService] Created new user in DB:', user.uid);
       }
 
-      const jwtPayload = { sub: user._id };
-      const jwtToken = this.jwtService.sign(jwtPayload);
-      console.log('[AuthService] Generated accessToken for user:', user._id);
-      return {
-        accessToken: idToken,
-        jwtToken,
-        email: user.email,
-        name: user.name,
+      if (user.role === 'pending') {
+        throw new UnauthorizedException('Awaiting admin approval');
+      }
+
+      const payload = {
+        sub: user.uid,
+        email: user.email ?? decoded.email ?? 'no-email',
         role: user.role,
-        _id: user._id.toString(),
       };
-    } catch (error) {
-      console.error('[AuthService] Firebase idToken verification error:', error);
-      throw new UnauthorizedException('Invalid idToken');
-    }
-  }
 
-  async validateGoogleUser(profile: { id: string; emails: { value: string }[]; displayName: string }): Promise<UserDocument> {
-    console.log('[AuthService] Validating Google user:', profile);
-    const googleId = profile.id;
-    const email = profile.emails[0].value;
-    const name = profile.displayName;
+      const jwtToken = this.jwtService.sign(payload, {
+        secret: process.env.JWT_SECRET || 'secret',
+        expiresIn: '7d',
+      });
 
-    let user = await this.userModel.findOne({ googleId }).exec();
-    if (!user) {
-      user = await this.userModel.findOne({ email }).exec();
-      if (user) {
-        if (user.googleId && user.googleId !== googleId) {
-          throw new UnauthorizedException('Email already linked to another Google account');
-        }
-        user.googleId = googleId;
-        await user.save();
-      } else {
-        user = new this.userModel({ googleId, email, name, role: 'user' });
-        await user.save();
-      }
+      return { jwtToken, user };
+    } catch (e) {
+      console.error('[AuthService] login error:', e);
+      throw new UnauthorizedException('Invalid token');
     }
-    return user;
-  }
-
-  async getProfile(userId: string): Promise<AuthResponseDto> {
-    console.log('[AuthService] Fetching profile for userId:', userId);
-    const user = await this.userModel.findById(userId).exec();
-    if (!user) {
-      throw new UnauthorizedException('User not found');
-    }
-    const jwtPayload = { sub: user._id };
-    const accessToken = this.jwtService.sign(jwtPayload);
-    return {
-      accessToken,
-      email: user.email,
-      name: user.name,
-      role: user.role,
-      _id: user._id.toString(),
-    };
   }
 }

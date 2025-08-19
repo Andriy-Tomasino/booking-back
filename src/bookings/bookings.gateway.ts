@@ -12,19 +12,17 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
 
   private readonly logger = new Logger(BookingsGateway.name);
 
-  constructor(
-    private readonly bookingsService: BookingsService,
-    private readonly jwtService: JwtService,
-  ) {}
+  constructor(private readonly bookingsService: BookingsService, private readonly jwtService: JwtService) {}
 
   async handleConnection(client: Socket) {
     try {
       const token = client.handshake.auth.token;
       const payload = this.jwtService.verify(token);
-      client.data.userId = payload.sub;
+      client.data.userId = payload.uid;
       this.logger.log(`Client connected: ${client.id}, User: ${client.data.userId}`);
+      client.join(client.data.userId);
     } catch (error) {
-      this.logger.error(`Connection failed: ${client.id}`);
+      this.logger.error(`Connection failed: ${client.id}, Error: ${(error as any).message}`);
       client.disconnect();
     }
   }
@@ -40,6 +38,6 @@ export class BookingsGateway implements OnGatewayConnection, OnGatewayDisconnect
   }
 
   async notifyBookingUpdate(booking: BookingDocument) {
-    this.server.emit('bookingsUpdate', booking);
+    this.server.to(booking.userId).emit('bookingsUpdate', booking);
   }
 }

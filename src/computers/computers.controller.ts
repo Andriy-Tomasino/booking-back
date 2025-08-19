@@ -1,45 +1,34 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Req, UseGuards, NotFoundException } from '@nestjs/common';
+import { Controller, Get, Post, Patch, Delete, Param, Body, ParseIntPipe } from '@nestjs/common';
 import { ComputersService } from './computers.service';
 import { CreateComputerDto, UpdateComputerDto } from './dtos/computer.dto';
-import { Computer, ComputerDocument } from '../common/models/computer.schema';
-import * as admin from 'firebase-admin';
-import { HttpException, HttpStatus } from '@nestjs/common';
 
 @Controller('computers')
 export class ComputersController {
   constructor(private readonly computersService: ComputersService) {}
 
   @Post()
-  createComputer(@Body() createComputerDto: CreateComputerDto): Promise<ComputerDocument> {
-    return this.computersService.createComputer(createComputerDto);
+  create(@Body() dto: CreateComputerDto) {
+    return this.computersService.createComputer(dto);
   }
 
   @Get()
-  async findAll(): Promise<Computer[]> {
+  getAll() {
     return this.computersService.getAllComputers();
   }
 
   @Get(':id')
-  async findOne(@Param('id') id: string): Promise<Computer> {
-    try {
-      return await this.computersService.getComputerById(id);
-    } catch (error) {
-      throw new NotFoundException(`Computer with id ${id} not found`);
-    }
-  }
-
-  @Get(':id/status')
-  getComputerStatus(@Param('id') id: string): Promise<Computer & { isPoweredOn: boolean }> {
-    return this.computersService.getComputerStatus(id);
+  getComputer(@Param('id') id: string) { // ✅ string
+    return this.computersService.getComputerById(id);
   }
 
   @Patch(':id')
-  updateComputer(@Param('id') id: string, @Body() updateComputerDto: UpdateComputerDto) {
-    return this.computersService.updateComputer(id, updateComputerDto);
+  updateComputer(@Param('id') id: string, @Body() dto: UpdateComputerDto) {
+    return this.computersService.updateComputer(id, dto);
   }
 
   @Delete(':id')
-  deleteComputer(@Param('id') id: string): Promise<void> {
+  deleteComputer(@Param('id') id: string) {
     return this.computersService.deleteComputer(id);
   }
+
 }

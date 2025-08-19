@@ -1,26 +1,45 @@
-import { IsMongoId, IsDateString, IsString, IsOptional } from 'class-validator';
+// src/bookings/dtos/create-booking.dto.ts
+import { IsDateString, IsString, IsOptional } from 'class-validator';
 
 export class CreateBookingDto {
-  @IsMongoId()
+  @IsString()
   computerId!: string;
+
+  @IsString()
+  userId!: string;
 
   @IsDateString()
   startTime!: string;
 
   @IsDateString()
   endTime!: string;
+
+  @IsString()
+  username!: string;
+
+  @IsString()
+  computerName!: string;
+
 }
 
 export class UpdateBookingDto {
   @IsDateString()
   @IsOptional()
-  startTime!: string;
+  startTime?: string;
 
   @IsDateString()
   @IsOptional()
-  endTime!: string;
+  endTime?: string;
 
   @IsString()
   @IsOptional()
-  status ?: 'active' | 'completed' | 'cancelled';
+  status?: 'active' | 'completed' | 'cancelled';
+
+  @IsString()
+  @IsOptional()
+  username?: string;
+
+  @IsString()
+  @IsOptional()
+  computerName?: string;
 }

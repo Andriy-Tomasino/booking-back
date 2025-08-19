@@ -22,6 +22,7 @@
     "strict": true,
     "moduleResolution": "node",
     "esModuleInterop": true,
+    "resolveJsonModule": true,
     "typeRoots": [
       "./node_modules/@types",
       "./src/types"

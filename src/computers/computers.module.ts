@@ -1,17 +1,17 @@
-import { Module } from '@nestjs/common';
+import { Module, forwardRef } from '@nestjs/common';
+import { MongooseModule } from '@nestjs/mongoose';
 import { ComputersController } from './computers.controller';
 import { ComputersService } from './computers.service';
-import { MongooseModule } from '@nestjs/mongoose';
-import { SmartOutletModule } from '../smart-outlet/smart-outlet.module';
 import { Computer, ComputerSchema } from '../common/models/computer.schema';
+import { BookingsModule } from '../bookings/bookings.module';
 
 @Module({
   imports: [
     MongooseModule.forFeature([{ name: Computer.name, schema: ComputerSchema }]),
-    SmartOutletModule,
+    forwardRef(() => BookingsModule), // ⬅️ обернули
   ],
   controllers: [ComputersController],
   providers: [ComputersService],
-  exports: [ComputersService],
+  exports: [ComputersService], // ⬅️ обычно экспортируют сервис, а не модуль
 })
 export class ComputersModule {}

@@ -9,15 +9,18 @@ import { BookingsModule } from './bookings/bookings.module';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
 import * as console from 'node:console';
+import { UsersModule } from './users/users.module';
+import { RegistrationsModule } from './registration/registrations.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({ load: [configuration] }),
-    SmartOutletModule,
     MongooseModule.forRoot('mongodb://127.0.0.1:27017/computer-booking'),
     ComputersModule,
+    RegistrationsModule,
     AuthModule,
     BookingsModule,
+    UsersModule,
   ],
 })
 export class AppModule {
@@ -27,7 +30,7 @@ export class AppModule {
     const serviceAccount = require(serviceAccountPath);
     if (!admin.apps.length) {
       admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+        credential: admin.credential.cert('./firebase-admin-config.json'),
       });
       console.log('Firebase Admin initialized');
     }

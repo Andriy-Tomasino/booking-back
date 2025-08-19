@@ -1,20 +1,18 @@
-import { Controller, Post, Body, Get, Request, UseGuards } from '@nestjs/common';
+// src/auth/auth.controller.ts
+import { Controller, Post, Body, BadRequestException } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { AuthResponseDto } from './dtos/auth.dto';
-import { AuthGuard } from '@nestjs/passport';
 
 @Controller('auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
-  @Post('google')
-  async googleLogin(@Body('idToken') idToken: string): Promise<AuthResponseDto> {
-    return this.authService.validateGoogleIdToken(idToken);
+  @Post('login')
+  async login(@Body('idToken') idToken: string) {
+    if (!idToken) {
+      throw new BadRequestException('idToken is required');
+    }
+    console.log('[AuthController] Login request with idToken');
+    return this.authService.login(idToken);
   }
 
-  @UseGuards(AuthGuard('jwt'))
-  @Get('profile')
-  async getProfile(@Request() req): Promise<AuthResponseDto> {
-    return this.authService.getProfile(req.user.sub);
-  }
 }

@@ -1,6 +1,6 @@
 import { Injectable, BadRequestException, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { Booking, BookingDocument } from '../common/models/booking.schema';
 import { ComputersService } from '../computers/computers.service';
 import { CreateBookingDto, UpdateBookingDto } from './dtos/create-booking.dto';
@@ -10,139 +10,105 @@ export class BookingsService {
   constructor(
     @InjectModel(Booking.name) private readonly bookingModel: Model<BookingDocument>,
     private readonly computersService: ComputersService,
-  ) {
-    console.log('BookingModel:', bookingModel);
-  }
+  ) {}
 
   async createBookings(userId: string, dto: CreateBookingDto): Promise<BookingDocument> {
-    const { computerId, startTime, endTime } = dto;
+    const { computerId, startTime, endTime, username, computerName } = dto;
+
+    if (!Types.ObjectId.isValid(computerId)) {
+      throw new BadRequestException('Invalid computerId');
+    }
+
     const start = new Date(startTime);
     const end = new Date(endTime);
-
-    console.log('[BookingsService] Creating booking:', { userId, computerId, startTime, endTime });
-
-    if (start >= end) {
-      console.log('[BookingsService] Validation failed: startTime >= endTime');
-      throw new BadRequestException('Start date must be before end date.');
+    if (isNaN(start.getTime()) || isNaN(end.getTime()) || start >= end) {
+      throw new BadRequestException('Invalid startTime or endTime');
     }
 
     const computer = await this.computersService.getComputerById(computerId);
     if (!computer) {
-      console.log('[BookingsService] Computer not found:', computerId);
-      throw new BadRequestException('Computer not found.');
+      throw new NotFoundException(`Computer with ID ${computerId} not found`);
     }
 
-    const overlappingBooking = await this.bookingModel.findOne({
-      computerId,
+    const overlapping = await this.bookingModel.findOne({
+      computer: computer._id,
       status: 'active',
       $or: [
-        { startTime: { $lt: end }, endTime: { $gt: start } },
+        { startTime: { $lt: end, $gte: start } },
+        { endTime: { $gt: start, $lte: end } },
+        { startTime: { $lte: start }, endTime: { $gte: end } },
       ],
-    }).exec();
+    });
 
-    if (overlappingBooking) {
-      console.log('[BookingsService] Overlapping booking found:', overlappingBooking);
-      throw new BadRequestException(`Computer is already booked from ${overlappingBooking.startTime} to ${overlappingBooking.endTime}.`);
+    if (overlapping) {
+      throw new BadRequestException(
+        `Computer is already booked from ${overlapping.startTime} to ${overlapping.endTime}`,
+      );
     }
 
     const booking = new this.bookingModel({
       userId,
-      computerId,
+      computer: computer._id,
+      user: dto.userId,       // <--- сюда
       startTime: start,
       endTime: end,
       status: 'active',
+      username,
+      computerName,
     });
 
-    console.log('[BookingsService] Updating computer availability:', computerId);
-    await this.computersService.updateComputer(computerId, { isAvailable: false });
-    const savedBooking = await booking.save();
-    console.log('[BookingsService] Booking created:', savedBooking);
-    return savedBooking;
-  }
-
-  async getBookingsByComputerId(computerId: string): Promise<BookingDocument[]> {
-    console.log('[BookingsService] Fetching bookings for computerId:', computerId);
-    const bookings = await this.bookingModel.find({ computerId, status: 'active' }).exec();
-    console.log('[BookingsService] Bookings found:', bookings);
-    return bookings;
-  }
-
-  async getBookingById(id: string): Promise<BookingDocument> {
-    const booking = await this.bookingModel
-      .findById(id)
-      .populate('userId', 'email name')
-      .populate('computerId', 'name location')
-      .exec();
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${id} not found.`);
-    }
-    return booking;
+    return booking.save();
   }
 
   async getUserBookings(userId: string): Promise<BookingDocument[]> {
-    return this.bookingModel
-      .find({ userId })
-      .populate('computerId', 'name location')
+    return this.bookingModel.find({ userId, status: 'active' })
+      .populate('computer', 'name location')
       .exec();
+  }
+
+
+  async getBookingsByComputerId(computerId: string): Promise<BookingDocument[]> {
+    return this.bookingModel
+      .find({ computer: computerId, status: 'active' }) // ищем по ObjectId
+      .sort({ startTime: 1 })
+      .populate('computer', 'name location')
+      .exec();
+  }
+
+
+  async getBookingById(id: string): Promise<BookingDocument> {
+    if (!Types.ObjectId.isValid(id)) throw new BadRequestException('Invalid booking id');
+    const booking = await this.bookingModel.findById(id).populate('computer', 'id name location').exec();
+    if (!booking) throw new NotFoundException(`Booking with ID ${id} not found.`);
+    return booking;
   }
 
   async getAllBookings(): Promise<BookingDocument[]> {
-    return this.bookingModel
-      .find()
-      .populate('computerId', 'name location')
-      .exec();
-  }
-
-  async getNextBookingByComputerId(computerId: string): Promise<BookingDocument | null> {
-    const now = new Date();
-    return this.bookingModel
-      .findOne({
-        computerId,
-        status: 'active',
-        startTime: { $gte: now }, // Бронирование в будущем
-      })
-      .sort({ startTime: 1 }) // Сортировка по startTime (ближайшее)
-      .exec();
+    return this.bookingModel.find().populate('computer', 'id name location').exec();
   }
 
   async updateBooking(id: string, userId: string, dto: UpdateBookingDto): Promise<BookingDocument> {
     const booking = await this.getBookingById(id);
-    if (booking.userId.toString() !== userId) {
-      throw new BadRequestException(`You can only update your own bookings`);
-    }
+    if (booking.userId !== userId) throw new BadRequestException('You can only update your own bookings');
 
-    if (dto.startTime || dto.endTime) {
-      const start = dto.startTime ? new Date(dto.startTime) : booking.startTime;
-      const end = dto.endTime ? new Date(dto.endTime) : booking.endTime;
+    const start = dto.startTime ? new Date(dto.startTime) : booking.startTime;
+    const end = dto.endTime ? new Date(dto.endTime) : booking.endTime;
+    if (start >= end) throw new BadRequestException('Start time must be before end time');
 
-      if (start >= end) {
-        throw new BadRequestException(`Start date must be less than end date.`);
-      }
+    const overlapping = await this.bookingModel.findOne({
+      id: { $ne: id },
+      computer: booking.computer.id,
+      status: 'active',
+      $or: [{ startTime: { $lt: end }, endTime: { $gt: start } }],
+    });
 
-      const overlappingBooking = await this.bookingModel
-        .findOne({
-          computerId: booking.computerId,
-          status: 'active',
-          _id: { $ne: id },
-          $or: [
-            { startTime: { $lt: end }, endTime: { $gt: start } },
-          ],
-        })
-        .exec();
+    if (overlapping) throw new BadRequestException('Computer is already booked during this time');
 
-      if (overlappingBooking) {
-        throw new BadRequestException(`You can only update your own bookings`);
-      }
-      booking.startTime = start;
-      booking.endTime = end;
-    }
-
-    if (dto.status) {
-      booking.status = dto.status;
-      if (dto.status === 'completed' || dto.status === 'cancelled') {
-        await this.computersService.updateComputer(booking.computerId.toString(), { isAvailable: true });
-      }
-    }
+    booking.startTime = start;
+    booking.endTime = end;
+    if (dto.status) booking.status = dto.status;
+    if (dto.username) booking.username = dto.username;
+    if (dto.computerName) booking.computerName = dto.computerName;
 
     await booking.save();
     return booking;
@@ -150,11 +116,21 @@ export class BookingsService {
 
   async deleteBooking(id: string, userId: string): Promise<void> {
     const booking = await this.getBookingById(id);
-    if (booking.userId.toString() !== userId){
-      throw new BadRequestException(`You can only delete your own bookings`);
-    }
-
-    await this.computersService.updateComputer(booking.computerId.toString(), { isAvailable: true });
+    if (booking.userId !== userId) throw new BadRequestException('You can only delete your own bookings');
     await this.bookingModel.findByIdAndDelete(id).exec();
+  }
+
+  async isComputerAvailable(computerId: number): Promise<boolean> {
+    const now = new Date();
+    const overlappingBooking = await this.bookingModel
+      .findOne({
+        'computer.id': computerId,
+        status: 'active',
+        startTime: { $lte: now },
+        endTime: { $gte: now },
+      })
+      .exec();
+
+    return !overlappingBooking;
   }
 }
