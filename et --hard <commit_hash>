@@ -1,9 +1,0 @@
-[33m12f31a8[m[33m ([m[1;36mHEAD -> [m[1;32mmaster[m[33m, [m[1;31morigin/master[m[33m, [m[1;31morigin/HEAD[m[33m)[m Add secret file to .gitignore
-[33m65b5ed9[m Removed serviceAccount.json from tracking and added to .gitignore
-[33m63306ef[m ._id -> .id
-[33mc248d1f[m initialization computers from id (earlier - _id )
-[33md7c61bd[m minimal working version
-[33m934e23a[m +firebase
-[33maa6e588[m pre-final commit
-[33ma857bbd[m work space
-[33mc17aabb[m Initial commit
