@@ -14,7 +14,10 @@ import { RegistrationsModule } from './registration/registrations.module';
 
 @Module({
   imports: [
-    ConfigModule.forRoot({ load: [configuration] }),
+    ConfigModule.forRoot({
+      isGlobal: true, // Makes ConfigService available globally
+      envFilePath: '.env',
+    }),
     MongooseModule.forRoot('mongodb://127.0.0.1:27017/computer-booking'),
     ComputersModule,
     RegistrationsModule,
@@ -36,3 +39,4 @@ export class AppModule {
     }
   }
 }
+

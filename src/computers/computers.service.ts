@@ -8,6 +8,14 @@ import { CreateComputerDto, UpdateComputerDto } from './dtos/computer.dto';
 export class ComputersService {
   constructor(@InjectModel(Computer.name) private readonly computerModel: Model<ComputerDocument>) {}
 
+  async findById(id: string): Promise<ComputerDocument> {
+    const computer = await this.computerModel.findById(id).exec();
+    if (!computer) {
+      throw new NotFoundException(`Computer with ID ${id} not found`);
+    }
+    return computer;
+  }
+
   async createComputer(dto: CreateComputerDto): Promise<ComputerDocument> {
     const computer = new this.computerModel(dto);
     return computer.save();

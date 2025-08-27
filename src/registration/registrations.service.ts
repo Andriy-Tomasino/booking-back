@@ -1,10 +1,13 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
-import { Model } from 'mongoose';
+import { Model, Types } from 'mongoose';
 import { PendingUser, PendingUserDocument } from './pending-user.schema';
 import { CreatePendingUserDto } from './dtos/create-pending-user.dto';
 import { UsersService } from '../users/users.service';
-import * as admin from 'firebase-admin';
+import { v4 as uuidv4 } from 'uuid';
+import * as bcrypt from 'bcrypt';
+
+type PendingUserWithoutPassword = Omit<PendingUser, 'password'> & { _id: string };
 
 @Injectable()
 export class RegistrationsService {
@@ -13,23 +16,46 @@ export class RegistrationsService {
     private readonly usersService: UsersService,
   ) {}
 
-  async createPending({ idToken, firstName, lastName, nickname }: CreatePendingUserDto): Promise<PendingUserDocument> {
-    const decodedToken = await admin.auth().verifyIdToken(idToken);
-    const { uid, phone_number } = decodedToken;
-    if (!phone_number) throw new BadRequestException('Phone number required');
+  async createPending(dto: CreatePendingUserDto): Promise<PendingUserWithoutPassword> {
+    const { firstName, lastName, nickname, phoneNumber, password } = dto;
 
-    const existingUser = await this.usersService.findByUid(uid);
-    if (existingUser) throw new BadRequestException('User already exists');
+    if (!phoneNumber) throw new BadRequestException('Phone number required');
 
-    const existingPending = await this.pendingUserModel.findOne({ uid }).exec();
-    if (existingPending) throw new BadRequestException('Pending registration exists');
+    const existingUserByNickname = await this.usersService.findOneByNickname(nickname).catch(() => null);
+    if (existingUserByNickname) throw new BadRequestException('Nickname already exists');
 
-    const pending = new this.pendingUserModel({ uid, phoneNumber: phone_number, firstName, lastName, nickname });
-    return pending.save();
+    const existingUserByPhone = await this.usersService.findOneByPhoneNumber(phoneNumber);
+    if (existingUserByPhone) throw new BadRequestException('Phone number already exists');
+
+    const existingPendingByNickname = await this.pendingUserModel.findOne({ nickname }).exec();
+    if (existingPendingByNickname) throw new BadRequestException('Pending registration with this nickname exists');
+
+    const existingPendingByPhone = await this.pendingUserModel.findOne({ phoneNumber }).exec();
+    if (existingPendingByPhone) throw new BadRequestException('Pending registration with this phone exists');
+
+    const uid = uuidv4();
+    const hashedPassword = await bcrypt.hash(password, 10);
+
+    const pending = new this.pendingUserModel({
+      uid,
+      firstName,
+      lastName,
+      nickname,
+      phoneNumber,
+      password: hashedPassword,
+    });
+
+    const saved = await pending.save();
+    const { password: _password, _id, ...rest } = saved.toObject();
+    return { _id: _id.toString(), ...rest } as PendingUserWithoutPassword;
   }
 
-  async getAllPending(): Promise<PendingUserDocument[]> {
-    return this.pendingUserModel.find().exec();
+  async getAllPending(): Promise<PendingUserWithoutPassword[]> {
+    const list = await this.pendingUserModel.find().lean().exec();
+    return list.map(({ password, _id, ...rest }) => ({
+      _id: _id.toString(),
+      ...rest,
+    })) as PendingUserWithoutPassword[];
   }
 
   async approve(id: string): Promise<void> {

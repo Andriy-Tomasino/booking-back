@@ -1,25 +1,26 @@
 // src/bookings/dtos/create-booking.dto.ts
-import { IsDateString, IsString, IsOptional } from 'class-validator';
+import { IsString, IsNotEmpty, IsDateString, IsOptional } from 'class-validator';
 
 export class CreateBookingDto {
   @IsString()
+  @IsNotEmpty()
   computerId!: string;
 
-  @IsString()
-  userId!: string;
-
   @IsDateString()
+  @IsNotEmpty()
   startTime!: string;
 
   @IsDateString()
+  @IsNotEmpty()
   endTime!: string;
 
   @IsString()
+  @IsNotEmpty()
   username!: string;
 
   @IsString()
+  @IsNotEmpty()
   computerName!: string;
-
 }
 
 export class UpdateBookingDto {
@@ -31,9 +32,10 @@ export class UpdateBookingDto {
   @IsOptional()
   endTime?: string;
 
+  // Добавьте другие поля, если нужно обновлять (например, status, username и т.д.)
   @IsString()
   @IsOptional()
-  status?: 'active' | 'completed' | 'cancelled';
+  status?: string;
 
   @IsString()
   @IsOptional()

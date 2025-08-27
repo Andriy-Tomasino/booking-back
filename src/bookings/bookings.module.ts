@@ -2,7 +2,7 @@ import { Module, forwardRef } from '@nestjs/common';
 import { BookingsController } from './bookings.controller';
 import { BookingsService } from './bookings.service';
 import { BookingsGateway } from './bookings.gateway';
-import { Booking, BookingSchema } from 'src/common/models/booking.schema';
+import { Booking, BookingSchema } from '../common/models/booking.schema';
 import { ComputersModule } from '../computers/computers.module';
 import { JwtModule } from '@nestjs/jwt';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -14,20 +14,20 @@ import { UsersModule } from '../users/users.module';
   imports: [
     MongooseModule.forFeature([{ name: Booking.name, schema: BookingSchema }]),
     AuthModule,
-    forwardRef(() => ComputersModule), // ⬅️ обернули
+    forwardRef(() => ComputersModule), // Циклическая зависимость с ComputersModule
+    UsersModule,
     JwtModule.registerAsync({
       imports: [ConfigModule],
       useFactory: async (configService: ConfigService) => ({
         secret: configService.get<string>('JWT_SECRET', 'secret'),
-        signOptions: { expiresIn: '1h' },
+        signOptions: { expiresIn: '7d' },
       }),
       inject: [ConfigService],
     }),
     ConfigModule,
-    UsersModule,
   ],
   controllers: [BookingsController],
-  providers: [BookingsService, BookingsGateway], // ⬅️ JwtModule тут не нужен в providers
-  exports: [BookingsService],
+  providers: [BookingsService, BookingsGateway],
+  exports: [BookingsService, BookingsGateway], // Без изменений: Экспортируем оба для других модулей
 })
 export class BookingsModule {}

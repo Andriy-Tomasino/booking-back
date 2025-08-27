@@ -5,6 +5,6 @@ export class CreateUserDto {
   lastName?: string;
   nickname?: string;
   phoneNumber?: string;
-  email?: string; // Добавь email
+  password?: string;
   role?: string;
 }

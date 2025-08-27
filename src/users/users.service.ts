@@ -1,4 +1,4 @@
-// users/users.service.ts
+// src/users/users.service.ts
 import { Injectable, HttpException, HttpStatus, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/mongoose';
 import { Model } from 'mongoose';
@@ -10,18 +10,42 @@ import { PendingUserDocument } from '../registration/pending-user.schema';
 export class UsersService {
   constructor(@InjectModel(User.name) private readonly userModel: Model<UserDocument>) {}
 
-  // src/users/users.service.ts (добавить в createFromPending и create)
+  async findByUid(uid: string): Promise<UserDocument> {
+    const user = await this.userModel.findOne({ uid }).exec();
+    if (!user) {
+      throw new NotFoundException(`User with UID ${uid} not found`);
+    }
+    return user;
+  }
+
+  async findOneByNickname(nickname: string): Promise<UserDocument> {
+    const user = await this.userModel.findOne({ nickname }).exec();
+    if (!user) {
+      throw new NotFoundException(`User with nickname ${nickname} not found`);
+    }
+    return user;
+  }
+
   async createFromPending(pending: PendingUserDocument): Promise<UserDocument> {
-    const dto: CreateUserDto = {
-      uid: pending.uid,
-      firstName: pending.firstName,
-      lastName: pending.lastName,
-      nickname: pending.nickname,
-      phoneNumber: pending.phoneNumber,
-      email: pending.email, // Добавь email, если есть в pending
-    };
-    const user = new this.userModel(dto);
-    return user.save();
+    try {
+      const dto: CreateUserDto = {
+        uid: pending.uid,
+        firstName: pending.firstName,
+        lastName: pending.lastName,
+        nickname: pending.nickname,
+        phoneNumber: pending.phoneNumber,
+        password: pending.password,
+      };
+      const user = new this.userModel(dto);
+      user.role = 'user';
+      return await user.save();
+    } catch (error: any) {
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        throw new HttpException(`User with this ${field} already exists`, HttpStatus.BAD_REQUEST);
+      }
+      throw new HttpException(error.message || 'Failed to create user from pending', HttpStatus.INTERNAL_SERVER_ERROR);
+    }
   }
 
   async create(createUserDto: CreateUserDto): Promise<UserDocument> {
@@ -32,12 +56,16 @@ export class UsersService {
         lastName: createUserDto.lastName,
         nickname: createUserDto.nickname,
         phoneNumber: createUserDto.phoneNumber,
-        email: createUserDto.email, // Добавь email
+        password: createUserDto.password,
         role: createUserDto.role || 'user',
       });
       await user.save();
       return user;
     } catch (error: any) {
+      if (error.code === 11000) {
+        const field = Object.keys(error.keyPattern)[0];
+        throw new HttpException(`User with this ${field} already exists`, HttpStatus.BAD_REQUEST);
+      }
       throw new HttpException(error.message || 'Failed to create user', HttpStatus.BAD_REQUEST);
     }
   }
@@ -63,9 +91,10 @@ export class UsersService {
     return user;
   }
 
-  async findByUid(uid: string): Promise<UserDocument | null> {
-    return this.userModel.findOne({ uid }).exec();
+  async findOneByPhoneNumber(phoneNumber: string): Promise<UserDocument | null> {
+    return this.userModel.findOne({ phoneNumber }).exec();
   }
+
 
   async findAll(): Promise<UserDocument[]> {
     return this.userModel.find().exec();

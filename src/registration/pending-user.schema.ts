@@ -5,8 +5,9 @@ export type PendingUserDocument = HydratedDocument<PendingUser>;
 
 @Schema({ timestamps: true })
 export class PendingUser {
+
   @Prop({ required: true, unique: true })
-  uid!: string;
+  uid!: string; // уникальный идентификатор
 
   @Prop({ required: true })
   firstName!: string;
@@ -20,8 +21,8 @@ export class PendingUser {
   @Prop({ required: true, unique: true })
   phoneNumber!: string;
 
-  @Prop({ required: true, unique: true })
-  email!: string;
+  @Prop({ required: true })
+  password!: string;
 }
 
 export const PendingUserSchema = SchemaFactory.createForClass(PendingUser);

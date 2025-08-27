@@ -7,26 +7,32 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 export class RegistrationsController {
   constructor(private readonly registrationsService: RegistrationsService) {}
 
+  /** Создать pending пользователя (регистрация) */
   @Post()
-  createPending(@Body() dto: CreatePendingUserDto) {
+  async createPending(@Body() dto: CreatePendingUserDto) {
     return this.registrationsService.createPending(dto);
   }
 
+  /** Получить всех pending пользователей (только админ) */
   @UseGuards(JwtAuthGuard)
   @Get()
-  getAllPending() {
+  async getAllPending() {
     return this.registrationsService.getAllPending();
   }
 
+  /** Подтвердить pending пользователя (создать реального пользователя) */
   @UseGuards(JwtAuthGuard)
   @Post(':id/approve')
-  approve(@Param('id') id: string) {
-    return this.registrationsService.approve(id);
+  async approve(@Param('id') id: string) {
+    await this.registrationsService.approve(id);
+    return { message: 'User approved successfully' };
   }
 
+  /** Отклонить pending пользователя */
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  reject(@Param('id') id: string) {
-    return this.registrationsService.reject(id);
+  async reject(@Param('id') id: string) {
+    await this.registrationsService.reject(id);
+    return { message: 'User rejected successfully' };
   }
 }

@@ -1,21 +1,20 @@
-// src/common/models/booking.schema.ts
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
-import { Document, Schema as MongooseSchema } from 'mongoose';
+import { HydratedDocument, Types } from 'mongoose';
 import { User } from './user.schema';
 import { Computer } from './computer.schema';
 
-export type BookingDocument = Booking & Document;
+export type BookingDocument = HydratedDocument<Booking>;
 
-@Schema()
+@Schema({ timestamps: true })
 export class Booking {
   @Prop({ required: true })
-  userId!: string;
+  userId!: string; // Stores the user's uid (UUID string)
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'User', required: true })
-  user!: User;
+  @Prop({ type: Types.ObjectId, ref: 'User', required: true })
+  user!: Types.ObjectId; // Reference to User _id
 
-  @Prop({ type: MongooseSchema.Types.ObjectId, ref: 'Computer', required: true })
-  computer!: Computer;
+  @Prop({ type: Types.ObjectId, ref: 'Computer', required: true })
+  computer!: Types.ObjectId;
 
   @Prop({ required: true })
   startTime!: Date;
@@ -23,8 +22,8 @@ export class Booking {
   @Prop({ required: true })
   endTime!: Date;
 
-  @Prop({ default: 'active' })
-  status!: 'active' | 'completed' | 'cancelled';
+  @Prop({ required: true, enum: ['active', 'completed', 'cancelled'] })
+  status!: string;
 
   @Prop({ required: true })
   username!: string;

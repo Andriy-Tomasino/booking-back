@@ -1,9 +1,7 @@
+// src/registration/dtos/create-pending-user.dto.ts
 import { IsString } from 'class-validator';
 
 export class CreatePendingUserDto {
-  @IsString()
-  idToken!: string;
-
   @IsString()
   firstName!: string;
 
@@ -12,4 +10,10 @@ export class CreatePendingUserDto {
 
   @IsString()
   nickname!: string;
+
+  @IsString()
+  phoneNumber!: string;
+
+  @IsString()
+  password!: string;
 }

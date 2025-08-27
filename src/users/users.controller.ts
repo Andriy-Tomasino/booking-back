@@ -1,4 +1,5 @@
-// users/users.controller.ts
+// src/users/users.controller.ts
+// Adjusted for no email, and uid handling
 import { Controller, Post, Body, Get, Request, UseGuards, HttpException, HttpStatus, Put, Delete, Param } from '@nestjs/common';
 import { UsersService } from './users.service';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -74,7 +75,6 @@ export class UsersController {
       lastName: user.lastName,
       nickname: user.nickname,
       phoneNumber: user.phoneNumber,
-      email: user.email,
       role: user.role,
     }));
   }

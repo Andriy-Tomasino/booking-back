@@ -1,13 +1,13 @@
-// src/auth/auth.module.ts
-import { Module } from '@nestjs/common';
-import { MongooseModule } from '@nestjs/mongoose';
+import { forwardRef, Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { ConfigModule, ConfigService } from '@nestjs/config';
+import { MongooseModule } from '@nestjs/mongoose';
 
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { JwtStrategy } from './jwt.strategy';
+import { JwtAuthGuard } from './jwt-auth.guard';
 
 import { User, UserSchema } from '../common/models/user.schema';
 import { UsersModule } from '../users/users.module';
@@ -15,11 +15,11 @@ import { RegistrationsModule } from '../registration/registrations.module';
 
 @Module({
   imports: [
-    ConfigModule, // чтобы JwtStrategy и JwtModule получили JWT_SECRET
-    UsersModule,
+    ConfigModule,
+    forwardRef(() => UsersModule),
     RegistrationsModule,
-    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     PassportModule,
+    MongooseModule.forFeature([{ name: User.name, schema: UserSchema }]),
     JwtModule.registerAsync({
       imports: [ConfigModule],
       inject: [ConfigService],
@@ -30,7 +30,7 @@ import { RegistrationsModule } from '../registration/registrations.module';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtStrategy],
-  exports: [AuthService, JwtStrategy],
+  providers: [AuthService, JwtStrategy, JwtAuthGuard],
+  exports: [AuthService, JwtModule, JwtAuthGuard],
 })
 export class AuthModule {}
