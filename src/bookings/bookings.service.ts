@@ -7,6 +7,7 @@ import { Booking, BookingDocument } from '../common/models/booking.schema';
 import { UsersService } from '../users/users.service';
 import { ComputersService } from '../computers/computers.service';
 import { BookingsGateway } from './bookings.gateway';
+import { User } from '../common/models/user.schema';
 
 @Injectable()
 export class BookingsService {
@@ -86,8 +87,9 @@ export class BookingsService {
         startTime: start,
         endTime: end,
         status: 'active',
-        username: dto.username,
-        computerName: dto.computerName,
+        username: user.nickname || user.firstName || 'Невідомий користувач',
+        computerName: computer.name,         // ✅ вместо dto.computerName
+        locationName: computer.location,
       });
 
       this.logger.log(`Booking object before save: ${JSON.stringify(booking)}`);
@@ -112,18 +114,46 @@ export class BookingsService {
     return this.bookingModel.find({ userId }).exec();
   }
 
-  async getBookingsByComputerId(id: string) {
-    if (!Types.ObjectId.isValid(id)) {
-      this.logger.error(`Invalid computer ID format: ${id}`);
-      throw new BadRequestException('Invalid computer ID format');
-    }
-    this.logger.log(`Fetching bookings for computer ID: ${id}`);
-    // Приводим id к ObjectId
-    const objectId = new Types.ObjectId(id);
-    const bookings = await this.bookingModel.find({ computer: objectId }).exec();
-    this.logger.log(`Found ${bookings.length} bookings for computer ${id}`);
-    return bookings;
+  // src/bookings/bookings.service.ts
+
+  async getBookingsByComputerId(computerId: string) {
+    const objectId = new Types.ObjectId(computerId);
+
+    const bookings = await this.bookingModel
+      .find({ computer: objectId })
+      .populate('user', 'nickname username email firstName lastName') // ⚡️ тянем всё что может пригодиться
+      .exec();
+
+    const formattedBookings = bookings.map(b => {
+      const user: any = b.user; // user после populate уже объект, но TypeScript видит ObjectId
+      let displayName = 'Користувач';
+
+      if (user) {
+        displayName =
+          user.nickname ||
+          user.username ||
+          `${user.firstName || ''} ${user.lastName || ''}`.trim() ||
+          user.email ||
+          b.username || // то что ты сохраняешь в booking
+          'Користувач';
+      }
+
+      return {
+        _id: b._id,
+        userId: b.userId,
+        username: displayName,
+        startTime: b.startTime,
+        endTime: b.endTime,
+        status: b.status,
+        computerName: b.computerName,
+        locationName: b.locationName,
+      };
+    });
+
+    return formattedBookings;
   }
+
+
 
 
   async getBookingById(id: string) {
@@ -135,7 +165,11 @@ export class BookingsService {
   }
 
   async getAllBookings() {
-    return this.bookingModel.find().exec();
+    return this.bookingModel
+      .find()
+      .populate('computer', 'name location') // подтягиваем имя и локацию компьютера
+      .populate('user', 'username nickname firstName lastName') // подтягиваем данные пользователя
+      .exec();
   }
 
   async updateBooking(id: string, userId: string, updateBookingDto: UpdateBookingDto) {

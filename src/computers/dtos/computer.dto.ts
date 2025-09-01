@@ -11,8 +11,8 @@ export class CreateComputerDto{
   location !: string;
 
   @IsString()
-  @IsNotEmpty()
-  outletId !: string;
+  @IsOptional()
+  outletId?: string;
 }
 
 export class UpdateComputerDto{

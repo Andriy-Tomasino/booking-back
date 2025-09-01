@@ -1,13 +1,11 @@
 import { Prop, Schema, SchemaFactory } from '@nestjs/mongoose';
 import { HydratedDocument } from 'mongoose';
+import { Booking } from './booking.schema';
 
 export type ComputerDocument = HydratedDocument<Computer>;
 
 @Schema()
 export class Computer {
-  @Prop({ required: true, unique: true })
-  id!: number;
-
   @Prop({ required: true })
   name!: string;
 
@@ -21,10 +19,28 @@ export class Computer {
   updatedAt!: Date;
 
   @Prop()
-  outletId!: string; // Опционально
+  outletId?: string;
 
   @Prop()
-  status!: string; // Опционально
+  status!: string;
 }
 
 export const ComputerSchema = SchemaFactory.createForClass(Computer);
+
+// --- виртуал для бронирований
+ComputerSchema.virtual('bookings', {
+  ref: Booking.name,
+  localField: '_id',
+  foreignField: 'computer',
+});
+
+// --- вместо _id отдаём id
+ComputerSchema.set('toJSON', {
+  virtuals: true,
+  versionKey: false,
+  transform: (_: any, ret: any) => {
+    ret.id = ret._id.toString();   // руками добавляем id
+    delete (ret as any)._id;       // TS больше не ругается
+  },
+});
+

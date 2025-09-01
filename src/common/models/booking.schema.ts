@@ -30,6 +30,9 @@ export class Booking {
 
   @Prop({ required: true })
   computerName!: string;
+
+  @Prop()
+  locationName!: string;
 }
 
 export const BookingSchema = SchemaFactory.createForClass(Booking);

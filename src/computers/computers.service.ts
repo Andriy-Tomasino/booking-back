@@ -21,14 +21,14 @@ export class ComputersService {
     return computer.save();
   }
 
-  async getComputerById(id: string) { // ✅ string
-    if (!Types.ObjectId.isValid(id)) return null;
-    return this.computerModel.findById(id);
+  async getAllComputers(): Promise<ComputerDocument[]> {
+    return this.computerModel.find().populate('bookings').exec();
   }
 
-  async getAllComputers(): Promise<ComputerDocument[]> {
-    return this.computerModel.find().exec();
+  async getComputerById(id: string) {
+    return this.computerModel.findById(id).populate('bookings').exec();
   }
+
 
   async updateComputer(id: string, dto: UpdateComputerDto) {
     const computer = await this.getComputerById(id);
