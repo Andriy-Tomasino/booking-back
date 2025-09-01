@@ -232,19 +232,21 @@ export class BookingsService {
     return updatedBooking;
   }
 
-  async deleteBooking(id: string, userId: string) {
+  async deleteBooking(id: string, userId?: string, isAdmin = false) {
     const booking = await this.bookingModel.findById(id).exec();
-    if (!booking) {
-      throw new NotFoundException(`Booking with ID ${id} not found`);
-    }
+    if (!booking) throw new NotFoundException(`Booking with ID ${id} not found`);
 
-    const user = await this.usersService.findByUid(userId);
-    if (!user || booking.user.toString() !== user._id.toString()) {
-      throw new NotFoundException('Booking does not belong to this user');
+    if (!isAdmin) {
+      if (!userId) throw new BadRequestException('User ID is required');
+      const user = await this.usersService.findByUid(userId);
+      if (!user || booking.user.toString() !== user._id.toString()) {
+        throw new NotFoundException('Booking does not belong to this user');
+      }
     }
 
     await this.bookingModel.findByIdAndDelete(id).exec();
-
     return { message: 'Booking deleted' };
   }
+
+
 }

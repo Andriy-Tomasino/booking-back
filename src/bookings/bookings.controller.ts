@@ -1,4 +1,4 @@
-import { Controller, Post, Body, Get, Param, Patch, Delete, UseGuards, Request } from '@nestjs/common';
+import { Controller, Post, Body, Get, Param, Patch, Delete, UseGuards, Request, Req } from '@nestjs/common';
 import { BookingsService } from './bookings.service';
 import { CreateBookingDto, UpdateBookingDto } from './dtos/create-booking.dto';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -44,8 +44,12 @@ export class BookingsController {
 
   @UseGuards(JwtAuthGuard)
   @Delete(':id')
-  deleteBooking(@Param('id') id: string, @Request() req) {  // ИСПРАВЛЕНО: Убрал @Body('userId'), теперь userId из JWT как в других методах
-    const userId = req.user.sub;
-    return this.bookingsService.deleteBooking(id, userId);
+  async deleteBooking(
+    @Param('id') id: string,
+    @Req() req: any,
+  ) {
+    const isAdmin = req.user?.role === 'admin';
+    const userId = isAdmin ? undefined : req.user?.uid;
+    return this.bookingsService.deleteBooking(id, userId, isAdmin);
   }
 }
