@@ -1,5 +1,5 @@
 import { Module } from '@nestjs/common';
-import { ConfigModule } from '@nestjs/config';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { MongooseModule } from '@nestjs/mongoose';
 import { SmartOutletModule } from './smart-outlet/smart-outlet.module';
 import { ComputersModule } from './computers/computers.module';
@@ -7,7 +7,6 @@ import { AuthModule } from './auth/auth.module';
 import { BookingsModule } from './bookings/bookings.module';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
-import * as console from 'node:console';
 import { UsersModule } from './users/users.module';
 import { RegistrationsModule } from './registration/registrations.module';
 
@@ -18,16 +17,20 @@ import { RegistrationsModule } from './registration/registrations.module';
       envFilePath: '.env', // локально підтягує .env
     }),
 
-    // Перевірка змінної
+    // Асинхронне підключення до Mongo
     MongooseModule.forRootAsync({
-      useFactory: () => {
-        const uri = process.env.MONGO_URI;
+      imports: [ConfigModule],
+      inject: [ConfigService],
+      useFactory: (configService: ConfigService) => {
+        const uri = configService.get<string>('MONGO_URI');
+        console.log('🚀 Mongo URI from ConfigService:', uri);
+
         if (!uri) {
           throw new Error(
             '❌ MONGO_URI is not defined! Перевір .env локально або Variables у Railway.',
           );
         }
-        console.log('✅ Using Mongo URI:', uri);
+
         return { uri };
       },
     }),
