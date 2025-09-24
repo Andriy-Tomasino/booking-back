@@ -18,7 +18,7 @@ import { RegistrationsModule } from './registration/registrations.module';
       isGlobal: true, // Makes ConfigService available globally
       envFilePath: '.env',
     }),
-    MongooseModule.forRoot('mongodb+srv://BookingTomas:cjgskrf@bookcluster.ekieqnx.mongodb.net/?retryWrites=true&w=majority&appName=BookCluster'),
+    MongooseModule.forRoot(process.env.MONGO_URI!),
     ComputersModule,
     RegistrationsModule,
     AuthModule,
