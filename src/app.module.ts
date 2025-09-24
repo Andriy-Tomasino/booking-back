@@ -4,7 +4,6 @@ import { MongooseModule } from '@nestjs/mongoose';
 import { SmartOutletModule } from './smart-outlet/smart-outlet.module';
 import { ComputersModule } from './computers/computers.module';
 import { AuthModule } from './auth/auth.module';
-import { configuration } from './config/configuration';
 import { BookingsModule } from './bookings/bookings.module';
 import * as admin from 'firebase-admin';
 import * as path from 'path';
@@ -15,17 +14,21 @@ import { RegistrationsModule } from './registration/registrations.module';
 @Module({
   imports: [
     ConfigModule.forRoot({
-      isGlobal: true, // Makes ConfigService available globally
-      envFilePath: '.env',
+      isGlobal: true,
+      envFilePath: '.env', // локально підтягує .env
     }),
 
-    // Лог перед конектом до MongoDB
+    // Перевірка змінної
     MongooseModule.forRootAsync({
-      useFactory: async () => {
-        console.log('Mongo URI from .env:', process.env.MONGO_URI);
-        return {
-          uri: process.env.MONGO_URI!,
-        };
+      useFactory: () => {
+        const uri = process.env.MONGO_URI;
+        if (!uri) {
+          throw new Error(
+            '❌ MONGO_URI is not defined! Перевір .env локально або Variables у Railway.',
+          );
+        }
+        console.log('✅ Using Mongo URI:', uri);
+        return { uri };
       },
     }),
 
@@ -41,7 +44,6 @@ export class AppModule {
     const serviceAccountPath = path.resolve(__dirname, '../../serviceAccount.json');
     console.log('Loading serviceAccount from:', serviceAccountPath);
     const serviceAccount = require(serviceAccountPath);
-
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert('./firebase-admin-config.json'),
