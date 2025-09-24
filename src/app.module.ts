@@ -18,7 +18,17 @@ import { RegistrationsModule } from './registration/registrations.module';
       isGlobal: true, // Makes ConfigService available globally
       envFilePath: '.env',
     }),
-    MongooseModule.forRoot(process.env.MONGO_URI!),
+
+    // Лог перед конектом до MongoDB
+    MongooseModule.forRootAsync({
+      useFactory: async () => {
+        console.log('Mongo URI from .env:', process.env.MONGO_URI);
+        return {
+          uri: process.env.MONGO_URI!,
+        };
+      },
+    }),
+
     ComputersModule,
     RegistrationsModule,
     AuthModule,
@@ -31,6 +41,7 @@ export class AppModule {
     const serviceAccountPath = path.resolve(__dirname, '../../serviceAccount.json');
     console.log('Loading serviceAccount from:', serviceAccountPath);
     const serviceAccount = require(serviceAccountPath);
+
     if (!admin.apps.length) {
       admin.initializeApp({
         credential: admin.credential.cert('./firebase-admin-config.json'),
@@ -39,4 +50,3 @@ export class AppModule {
     }
   }
 }
-
