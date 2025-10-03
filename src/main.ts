@@ -13,7 +13,7 @@ async function bootstrap() {
 
   const app = await NestFactory.create(AppModule);
   app.enableCors({
-    origin: 'http://localhost:8081',
+    origin: 'https://www.islab.space',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
     allowedHeaders: ['Content-Type', 'Authorization'],
     credentials: true,
